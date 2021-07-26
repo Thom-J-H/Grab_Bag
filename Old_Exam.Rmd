@@ -1,0 +1,147 @@
+---
+title: "Note on a Tidyverse Certification Exam"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, fig.fullwidth = TRUE, fig.align = "center")
+```
+
+
+
+
+
+```{r libraries, echo = TRUE}
+library(tidyverse)
+library(here)
+library(visdat)
+```
+ 
+
+
+## The Challenge
+This applies to an [older exam](https://education.rstudio.com/blog/2020/02/instructor-certification-exams/#tidyverse-certification-exam) for RStudio Tidyverse Certification. I came across the exam while preparing for the newer version. (I had successfully completed the *Teaching Exam* with Greg Wilson on 2021-02-01, but then shortly afterwards RStudio had a change of direction.  The [Instructor Certification process](https://education.rstudio.com/trainers) is currently suspended). I found I respectfully disagreed with the solution that a few highly skilled and qualified individuals posted as the correct answer.  So I offer my version below.
+
+Working with the [ranking.csv](https://education.rstudio.com/blog/2020/02/instructor-certification-exams/ranking.csv) data, the test-taker was challenged to "Re-create this plot using the tidyverse and ggplot2, fixing any mistakes you notice along the way".
+
+### Reproduce &  Fix
+
+![The Challenge Plot](https://education.rstudio.com/blog/2020/02/instructor-certification-exams/figs/ranking-scatterplot-1.png)
+
+### The Data
+
+Let's assume that `ranking.csv` has been download to the folder `data` in in your project directory.  Otherwise, modify the following code as needed.
+
+```{r load_dat, echo = TRUE}
+ranking <- read_csv(here::here("data", "ranking.csv"))
+
+ranking %>% vis_dat()
+ranking %>% glimpse()
+
+```
+
+
+### The First Task
+
+The data is in long format. We do not have the variables `positive` and `negative` to plot.  Nor do we have a count for each -- a value to plot. We have only `item` and `rank`.  So this truthfully is the real challenge: transform the data to a set we can plot.
+
+Let me state that the posted solutions I've seen for this part are excellent.
+
+#### Breaking it down
+
+Let's break down what we need to do.  Each item might have several rankings. The distinct levels (as `rank` is more properly a factor) are: `r unique(ranking$rank)` .  For our task, we only need consider `positive` and `negative`.
+
+We need to `group_by()` the variable `item`, then `count()` the `rank` levels ("positive", "negative", etc.) for each item, then `pivot_wider()` the `rank` variable. So in our new wide format, we have the levels as names (new variables) and the counts as their values. 
+
+Finally, we see that plot maps `positive` and `negative` variables as percentages.  So we will also need to convert our count values to the individual counts over the sum per item.
+
+This can all be done in one step, but I will do it in two: create the wide version, and then convert the values. In this instance, we can convert NA to zero: the survey had 0 replies for that level. In other instances, it might be best to leave NA values standing.
+
+```{r wide, echo = TRUE}
+rank_wide <- ranking %>%
+  group_by(item) %>%
+  count(rank) %>%
+  pivot_wider(names_from = rank, values_from = n) %>%
+  ungroup() %>%
+  replace_na(list(positive = 0, 
+                  negative = 0, 
+                  indifferent = 0, 
+                  wtf = 0) )
+
+rank_wide %>% head() %>% knitr::kable()
+```
+
+Now, we need to express the count values as a percentage. We can use the Purrr function syntax.  Although I removed the NA values earlier, we can keep `na.rm = TRUE` as a safety check and good coding practice.
+
+```{r wide_two, echo = TRUE}
+rank_wide <- rank_wide %>%
+  group_by(item) %>%
+  mutate(tot = sum(positive, 
+                   negative, 
+                   indifferent, 
+                   wtf, 
+                   na.rm = TRUE)) %>%
+  mutate_at(vars(-item, -tot), 
+            .funs = list(~ round(./tot, digits = 3)))
+
+rank_wide %>% head() %>% knitr::kable()
+```
+
+## The Improved Plot
+
+
+Now, we are ready to plot `positive ~ negative`.  But let's take a moment to look at the example plot. Our instructions were to "Re-create this plot using the tidyverse and ggplot2, fixing any mistakes you notice along the way" |[ref](https://education.rstudio.com/blog/2020/02/instructor-certification-exams/#tidyverse-certification-exam)|.
+
+### Questions About Original
+
+First, why is `alpha` showing in the legend?  It tells us nothing meaningful about the data. It clutters and detracts from the presentation. Second, why are the lines from `geom_smooth()` present in the legend?  In fact, they obscure our guide to size -- which does offer meaningful information. So turn them off. Third, the plot has no title and only the default labels.  Fourth, and arguably, why not scale the color? 
+
+
+### Modifications & Result
+
+Because we will be using color to help distinguish data points, we can increase the `alpha` a bit as well as remove it from the legend.
+
+```{r plot, echo = TRUE}
+
+rank_wide %>%
+  ggplot( aes(x = negative, 
+              y = positive,  
+              color = positive, 
+              size = tot)) +
+  geom_point(alpha = 0.4) +
+  geom_smooth(method = "lm" , show.legend = FALSE) +
+  labs(size = "Number\nof replies", 
+       color ="Positivity" ,
+       x = "Negative", 
+       y = "Positive",
+       title = "Survey Responses: Positive ~ Negative",
+       caption = "Data: rankings.csv") +
+  scale_color_viridis_c() +
+  scale_y_continuous(labels = scales::percent) +
+  scale_x_continuous(labels = scales::percent) +
+  guides(size = guide_legend(order = 1))
+
+```
+
+
+## Qualification
+So  I submit the above plot as a better solution to the challenge of "reproduce and fix": but in fairness, everyone taking the original exam was under extreme time pressure.  The real challenge again was not the plot but transforming the data. Reproducing the plot was proof you were able to transform the data.  I confess I found that challenge difficult and time-consuming.  In the context of a timed exam, I would have been quite happy to finish just by reproducing the original plot.
+
+Thank you for reading!
+
+<hr />
+<div style = "background-color: #F0F8FF; padding: 1em;">
+<p>Thomas J. Haslam  <br />
+`r Sys.Date()` </p>
+</div>
+<hr />
+
+### Session Info
+```{r package info, echo = FALSE}
+ses_info <- sessioninfo::package_info() %>% tibble() 
+ses_info %>% select(c(1,3,8,9)) %>% DT::datatable()
+```
