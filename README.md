@@ -3,7 +3,6 @@
 This repo collects all the notebooks (& related scripts) that add up to no greater whole or theme, but that I do not (yet) wish to throw away. In reverse chronological order.
 
 ## Exploring Student Height (the Central Limit Theorem)
-**2021-08-26**
 ![example](https://user-images.githubusercontent.com/12042357/130921846-b948eaf9-6ee5-4412-aeb4-ec403d43eb7e.png)
 
 
@@ -14,14 +13,15 @@ The RMDs published also at Rpubs:
 1. [Customized Graphs for Norm Dist](https://rpubs.com/Thom_JH/custom_graphing_nd)
 2. [Student Height: Fun with the ND](https://rpubs.com/Thom_JH/student_height_explore)
 
-
+**2021-08-26**
 
 
 ## Old Exam
-**2021-07-26**
+
 ![Reproduce and Fix](https://user-images.githubusercontent.com/12042357/126979413-10851409-6899-4cfd-a4a5-1b552639c083.png)
 
 
 Code and RMD here.  Report at RPubs:
 1. [A Tidyverse Exam Note](https://rpubs.com/Thom_JH/Reproduce_Fix)
 
+**2021-07-26**
