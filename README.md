@@ -15,7 +15,7 @@ The RMDs published also at Rpubs:
 
 **2021-08-26**
 
-<hr />
+<hr style = "text-align: center; width: 67%;" />
 
 ## Old Exam
 
