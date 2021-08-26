@@ -1,0 +1,545 @@
+---
+title: "Student Height: Fun with the ND"
+date: "`r Sys.Date()`"
+author: "Thom J. Haslam"
+output:
+  html_document:
+    toc: yes 
+    toc_float: yes
+  toc: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, fig.fullwidth = TRUE, fig.align = "center")
+```
+
+## Brief Introduction
+
+In Spring 2021, I taught a course entitled "Telling Stories with Data" (TSD), which introduced non-STEM majors to the Tidyverse and basic data visualization and analysis. I had bright students, but ones who typically had NO prior experience with either statistical analysis or computer programming. So TSD was designed as a soft entry, beginner-level guide to working with data.
+
+One early part of the course involved the students learning about distributions, including the normal distribution and the Central Limit Theorem (CLT). To help them explore the normal distribution and the CLT, I made some custom graphing functions (that process described in this markdown). We used these in our class. The custom functions, their associated data, and the related RMD and script freely available at [github.com/Thom-J-H/Grab_Bag](https://github.com/Thom-J-H/Grab_Bag.). Please feel free to download, use, and improve. Thank you.
+
+The following below duplicates part of our worksheet.
+
+<hr />
+
+```{r libraries}
+library(tidyverse)
+library(visdat)
+library(here)
+library(glue)
+```
+
+## Probability Spaces
+
+Data has a shape! That shape has qualities we can measure -- we can gain insight from. Today, building upon last week, we will explore more the distribution as a probability space.
+
+```{r data}
+
+load(file = here::here("data", 
+                             "tidy_data", 
+                             "fun_w_norm.RData"))
+
+
+```
+
+### Our Data (a Norm Dist)
+
+Our data set concerns a population of college students. The data source: Hartmann, K., Krois, J., Waske, B. (2018). "The Standard Normal Distribution." [E-Learning Project SOGA: Statistics and Geospatial Data Analysis](https://www.geo.fu-berlin.de/en/v/soga/Basics-of-statistics/Continous-Random-Variables/The-Standard-Normal-Distribution/The-Standard-Normal-Distribution-An-Example/index.html). Department of Earth Sciences, Freie Universitaet Berlin. CC-BY-SA 4.0.
+
+```{r dat_eda}
+stu_height %>% 
+  vis_dat()
+
+stu_height %>% 
+  skimr::skim()
+```
+
+### Height Distributions
+
+Human height is well-studied, and we know that for adults it is normally distributed. This both before and after accounting for gender (biological sex), since we generally have a fairly even *sex ratio* in the adult human population. But we get more accurate results when accounting for gender -- as we'll see below.
+
+As we discussed briefly last week, to describe the [normal distribution](https://campus.datacamp.com/courses/introduction-to-statistics-in-r/more-distributions-and-the-central-limit-theorem?ex=1) -- to map out the density and hence the probability space, we need only two values (more typically called *parameters*): the *mean* -- `mean()`, and *standard deviation* --`sd()`.
+
+We will see this at work later. Right now, let's see the *parameters* for our data, with the `min()` and `max()` values added for reference:
+
+```{r saved_stats}
+dist_stats %>%
+  knitr::kable( caption = "Quick Stats")
+```
+
+## Thinking Statistically
+
+We want to think in terms of distributions, **not** philosophical categories, absolutes, or binaries. Our distributions can overlap -- share value ranges -- but we can still make sense of both their similarities and differences.
+
+Likewise, we treat knowledge as having *degrees of certainty*, of probability -- which we try to quantify.
+
+```{r plot}
+
+plot_heights <- stu_height %>%
+  ggplot( aes(x = height,  fill = gender) ) +
+  geom_density(alpha = 0.4) +
+  labs(x = "Height in CM", y = "Density", 
+       fill = "Gender", title = "College Student Height: Normally Distributed",
+       subtitle = "8239 observations. Female: 4110.  Male: 4129.",
+       caption = "Data Source: Freie Universität Berlin") +
+  geom_vline(xintercept = male_avg,  lty = 3) +
+  geom_vline(xintercept = female_avg,  lty = 3) +
+  scale_fill_manual(values = c("red", "blue")) +
+  theme_classic() +
+  theme(legend.position = c(.9, .9))
+
+
+plot_heights  
+
+```
+
+So what does our plot show? On average, men are taller than women. But obviously, we have considerable overlap. For height, we are **NOT** claiming that *all* males are *exclusively* "X"; *all* females, *exclusively* "Y". Rather, we are recognizing both **similarities** and **differences**. Distributions show us **diversity** -- but also **relatedness**.
+
+### Distributions, not Sealed Boxes
+
+The first graph below shows the male distribution, capped at the maximum female height (from our data set: 193 CM). The blue area shows males who are outside the height range for female distribution.
+
+```{r mh_one }
+# custom function for these data sets
+female_max <- max(female_height$height)
+
+male_show_height_over(female_max) 
+```
+
+Not many! Just under 4% at 1.74 standard deviations away from the male average. BTW, that's what the **Z-Score** indicates (in our plot, **Zed**): how many standard deviations plus or minus from the mean.
+
+In the above example, our **Z-Score** is positive: so right of or higher than the mean. In some examples below, our **Z-Score** (**Zed**) is negative: so left of or lower than the mean.
+
+That clarified, we see that the female distribution for height contains 96% of the range for the male distribution.
+
+Now, let's ask a different question. Where does the smallest recorded male value fit in the female distribution?
+
+```{r fh_one }
+# custom function for these data sets
+male_min <- min(male_height$height)
+female_show_height_under(male_min)
+```
+
+Less than 1% of the female students are shorter than the shortest male student! At a region roughly 2.5 standard deviations from center -- these are outliers.
+
+So clearly, the data shows us that height ranges for women and men in this population have considerable overlap.
+
+Yet at the same time, when we consider the population as a whole, we still find measurable and meaningful differences.
+
+### Summary Stats
+
+Let's pull the numbers again! We know from our earlier EDA, we have no missing values -- so for now we can drop `na.rm = TRUE` from our code:
+
+```{r sum_stats}
+stu_height  %>% 
+  group_by(gender) %>% 
+  summarize(avg_height = mean(height), 
+            sd_height = sd(height),
+            min_height = min(height),
+            max_height = max(height)) %>%
+  knitr::kable( caption = "By Biological Sex")
+
+stu_height  %>% 
+    summarize(avg_height = mean(height), 
+            sd_height = sd(height),
+            min_height = min(height),
+            max_height = max(height)) %>%
+  knitr::kable( caption = "All students")
+
+```
+
+The summary stats give us useful information. They also confirm what the earlier plot showed us. But we want to understand the distribution as a probability space.
+
+### Testing Our Hypothesis
+
+So, the overall average height in our data set is 171 CM (rounded to the nearest CM). Let's make that a dividing line. What is the probability that a female student is under it? Over it? A male student?
+
+Let's find out!
+
+```{r fh_two }
+test_height <- mean(stu_height$height) %>% round( digits = 0)
+
+female_show_height_under(test_height)
+```
+
+So the probability of a female student being under 171 CM is 82%; by default, 18% of the female students have heights equal to or greater than 171 CM. Let's see that graph:
+
+```{r fh_three }
+female_show_height_over(test_height)
+```
+
+Although less than 1/5 of the female students are over 171 CM in height, it would not be truly unusual to find a female student with a height *around* 171 CM. This is less than one standard deviation from the mean.
+
+Now, let's apply the same test to the other gender in our data set:
+
+```{r mshu_one}
+ male_show_height_under(test_height) 
+```
+
+Roughly 16% of the males are under the overall average height. So by default, roughly 84% are above the overall average height.
+
+```{r msho_one}
+ male_show_height_over(test_height) 
+```
+
+It would also not be unusual to find a male student with a height around 171 CM: this is just over one SD from the mean.
+
+If we take 171 CM as a dividing line, here are the ratios for *students under*: 82% female vs. 16% male. For *students over*: 18% female vs. 84% male.
+
+### Speed Review
+
+It does make sense to claim that the male students, on average, are taller than the female students. But this claim holds for the distribution: not for any individual male or female student. The data does NOT prove that the male students are taller than the female students. Such an interpretation is obviously correct. We know from the first two plots that we have only small percentage of male students, roughly 4%, over the maximum female height of 193 CM. Likewise, less than 1% of the female students are under the minimum male height of of 144 CM.
+
+So we are **not** treating male and female here as philosophical boxes, absolutes, or opposed and exclusive binaries. Rather, we are using biological sex as a meaningful category to explore the phenomenon of biological height; and using biological height to provide some insight into differences and similarities for biological sex.
+
+### Play with it!
+
+Your turn. Test out some height values! Please remember: for *Female Height*, you must enter a value between `136` and `192`. Otherwise, our customizied `show_height` functions will give you a warning and/or throw an error message. For *Male Height*, a value between `145` and `201`. To run all tests at once, a value between `145` and `192`.
+
+```{r play, echo = TRUE}
+## type code below here
+new_test <- 165# change this number!
+
+# Choose a whole number value between 136 & 192
+female_show_height_under(new_test)
+female_show_height_over(new_test)
+
+
+# Choose a whole number  value between 145 & 201
+male_show_height_under(new_test) 
+male_show_height_over(new_test) 
+
+## type code above here
+```
+
+## Finding the Probability Space
+
+So our height numbers come from the data. But where do these other numbers come from? The *Probability space* value (the area shaded in the plot)? Or the *Standard Deviation* result -- the *Z-Score* -- for our tested height value? How do we get them from `R`?
+
+### Using pnorm()
+
+Unlike my customized functions for today, `pnorm()` is a base R function that works with any normal (or *nearly normal*) distribution. Right now, we have two data sets -- normal distributions --to work with: `female_height` and `male_height`.
+
+So, again, I will take a cut-off point of 173 CM. What is the probability that female student in our data set is shorter than 173 CM? Since we are also working with real data, this question is the equivalent of asking "what percentage of the female students in our data set are shorter than 173 CM?"
+
+#### Below Test Value: \< than
+
+The code pattern: `pnorm(test_number, mean, sd)` Please note that I have already calculated the values for `female_avg`, `male_avg`, `female_sd`, and `male_sd`. When you loaded the data, these became available in the environment for you to use.
+
+```{r fhu_p }
+
+pnorm(173, mean = female_avg, sd = female_sd)
+
+```
+
+So a probability of 0.88 or 88%. Most of the female students are shorter than 173 CM.
+
+Please notice that our custom `show_height` functions use `pnorm()` in the background, with the result rounded to 5 places.
+
+```{r fhu}
+female_show_height_under(173)
+```
+
+But you will not always have a custom function, so please learn how to use `pnorm()`. Then you could later build whatever custom functions you please!
+
+#### Above Test Value: \> than
+
+So how many female students are over 173 CM in height? We use `pnorm()` again. But we add one argument to the function: `pnorm(... , lower.tail = FALSE)`. We do not want the region up to our test number, in this case, 173: we want the region after it.
+
+```{r fho_p}
+pnorm(173, mean = female_avg, sd = female_sd, lower.tail = FALSE)
+```
+
+You've seen this result before as well! Again, our custom `show_height` functions use `pnorm()` in the background with the `lower.tail = TRUE` argument as needed.
+
+```{r fho }
+female_show_height_over(173)
+```
+
+One final note on finding the **\> than** probability region. Some people prefer to calculate this way:
+
+```{r one_minus}
+1 - pnorm(173, mean = female_avg, sd = female_sd)
+```
+
+Which is the same, if you think about it, as:
+
+```{r low_tail}
+pnorm(173, mean = female_avg, sd = female_sd, lower.tail = FALSE)
+```
+
+Since you might see both ways of doing this, I call it to your attention now to avoid future confusion.
+
+#### Between Two Values
+
+Now, this gets interesting! What if I want to find the probability space of all the female students between, say, 155 and 175 CM? There's more than one way to do this, but I will give you one that makes visual sense.
+
+We will calculate the two regions we do not need, the *below 155* and *above 175*, and subtract them from the total. The remaining probability space -- the gap between them -- by definition is the answer.
+
+Three steps.
+
+1.  Calculate the upper tail of the higher value: **Greater than**
+2.  Calculate the the lower value (lower tail by default is TRUE): **Lesser than**
+3.  Subtract from the total space. 1 - (Higher_Up + Lower_Down) = Answer.
+
+```{r find_area}
+# Step 1
+high_175 <- pnorm(175, mean = female_avg, sd = female_sd, lower.tail = FALSE)
+high_175 # excluded region
+
+# Step 2
+low_155 <- pnorm(155, mean = female_avg, sd = female_sd)
+low_155 # excluded region
+
+# Step 3
+ 1 - (high_175 + low_155) # remaining region
+```
+
+So I will plot that for you, but in your answers below, I recommend skipping this part -- no need to build a customized plot for the in-between range. The code might seem complicated!
+
+```{r shade_between}
+shade_reg <-  fh_area %>% 
+  filter(x > 155 & x < 175) # for male, use mh_area
+
+female_height %>% 
+  ggplot( aes(x = height, y = ..density.. ) ) +
+  geom_density(alpha = 0.4, fill = "grey") + 
+  geom_area(data = shade_reg, 
+            aes(x = x, y = y), 
+            fill = "red", 
+            alpha = 0.3) +
+  theme_classic() +
+  labs(title = "Female Students Height Distribution", 
+       x = "Height in CM", y = "Density",
+         subtitle = paste("Red area > 155 CM  & < 175 CM" ),
+         caption = "Data Source: Freie Universität Berlin")
+```
+
+By calculation, even though your eye might lead you astray, that's 78% of the probability space!
+
+We can get the same answer by thinking about the larger region (with lower tail) overlapping the smaller region. The overlap area is the difference -- the gap between them. So we need only subtract the smaller from the larger to get the same answer:
+
+```{r two_ways }
+large_reg <- pnorm(175, mean = female_avg, sd = female_sd)
+small_reg <- pnorm(155, mean = female_avg, sd = female_sd)
+
+large_reg - small_reg
+```
+
+Whichever way makes more sense to you!
+
+##### Quick and Dirty
+
+So if you are following all that, let's look at a quick and dirty method for betweeness. For a continuous numeric variable, like we have here, we never target an exact number -- we target a range that captures that number.
+
+Why? Well, as we discussed earlier, we treat continuous numeric variables -- numbers that we obtained by measuring -- as floating points: we could always remeasure and get a higher degree of precision. Likely, none of students have an exact height of 179 CM. The exact heights would be more like (at 5 decimal places) 179.20483, 179.00072, 179.14152, and 179.42272 CM. Or, maybe 178.90632, 178.84139, etc.
+
+Say I want to know the probability of a male student being 179 CM tall or right abouts. I can feed `pnorm()` a vector of the over and under to capture `179`: `c(180, 178)`. You'll see why I went high-low in a second.
+
+```{r vec }
+capt <- c(180, 178)
+quick_bw <- pnorm(capt,  mean = male_avg, sd = male_sd)
+quick_bw # have a look
+
+quick_bw[1] - quick_bw[2] # large - small
+
+```
+
+Pretty impressive! 10%. Of course, the average male height is 179.073 CM, so we captured a slice of the region that runs from the bottom to the very top of the density curve.
+
+```{r between_shade}
+shade_reg2 <-  mh_area %>% 
+  filter(x > 178 & x < 180) # male, mh_area; female, fh_area
+
+male_height %>% 
+  ggplot( aes(x = height, y = ..density.. ) ) +
+  geom_density( alpha = 0.4, fill = "grey") + 
+  geom_area(data = shade_reg2, aes(x = x, y = y), 
+            fill = "blue", alpha = 0.3) +
+  theme_classic() +
+  labs(title = "Male Students Height Distribution", 
+       x = "Height in CM", y = "Density",
+         subtitle = paste("Blue area > 178 CM  & < 180 CM" ),
+         caption = "Data Source: Freie Universität Berlin")
+```
+
+If you think about this quick and dirty fix just a bit more, you have another way to solve one of the questions below!
+
+### Speed Review
+
+We learned how to calculate the probability spaces for below a certain value, above a certain value, and between two specified values.
+
+### Your turn!
+
+Your turn now to apply your knowledge. Using `male_avg`, `male_sd`, and `pnorm()`, answer the following questions. You may use our custom function to check your work, but your answers must come from `pnorm()`.
+
+#### Question 1
+
+What is the probability that a male college student is over 180 CM in height? Again, because we are also working with real data, we could rephrase this question as: "what percentage of the male students are over 180 CM in height?"
+
+```{r ans_one }
+# type code below -- use male_avg & male_sd
+
+
+#type code above
+```
+
+#### Question 2
+
+What is the probability that a male college student is under 186 CM in height? Again, because we are also working with real data, we could rephrase this question as: "what percentage of the male students are under 186 CM in height?"
+
+```{r ans_two }
+# type code below -- -- use male_avg & male_sd
+
+#type code above
+```
+
+#### Question 3
+
+What is the probability that a male college student is between 175 and 185 CM in height? Again, because we are also working with real data, we could rephrase this question as: "what percentage of the male students are between 175 and 185 CM in height?"
+
+```{r ans_three }
+# type code below -- -- use male_avg & male_sd
+
+#type code above
+```
+
+### Using qnorm()
+
+We are not quite done! Suppose I want to know what are the height results for first, second, and third quarters of data set: the results at 25%, 50%, and 75%.
+
+We use `qnorm()` which takes a quantile, and gives us back the matching value. Like `pnorm()`, `qnorm()` can also take a vector.
+
+Let's have a look at `male_height`, by using `male_avg` & `male_sd`:
+
+```{r echo = TRUE}
+test_quint <- c(0.25, 0.5, 0.75)
+qnorm(test_quint, mean = male_avg, sd = male_sd)
+
+# which is the same as
+qnorm( c(0.25, 0.5, 0.75),  mean = male_avg, sd = male_sd)
+
+# but you might find it easier to make the vector OUTSIDE of the function
+```
+
+Notice that for a Normal Distribution, the mean and median are the same. (Or, in the case of a *nearly* Normal Distribution, almost identical).
+
+Now suppose I just want the 88th percentile. No problem. Again, like `pnorm()`, `qnorm()` can take a single value or a vector of values.
+
+```{r echo = TRUE}
+qnorm(0.88, mean = male_avg, sd = male_sd)
+```
+
+### Your Turn Again!
+
+Working with `female_height`, and so using `female_avg` & `female_sd`, answer the following questions.
+
+#### Question One
+
+What are the height values at the 33% and 67% marks? (Hint: 0.33, 0.67). You can calculate them individually or both at once.
+
+```{r qans_one }
+# type code below -- -- use female_avg & female_sd
+
+
+#type code above
+```
+
+#### Question Two
+
+What are the height values at the 20%, 40%, 60%, and 80% marks? You must create a vector, and calculate them all at once.
+
+```{r qans_two }
+# type code below -- -- use female_avg & female_sd
+
+
+#type code above
+```
+
+### Z-Scores
+
+To get the Z-Scores for the entire data set all at once, we need to "standardize" our normal distribution. This requires centering and scaling the data.
+
+#### Centering
+
+We center the data by subtracting the mean value from all the observations. This centers the mean effectively at ZERO: 0, and recalibrates the values based upon their distance -- positive or negative from center.
+
+#### Scaling
+
+We scale the data by converting the values -- the observations -- to their Z-scores. Meaning, for our data sets here, we no longer care how far away they are in terms of centimeters: we measure their distance now in standard deviations.
+
+I will not go into detail on the code for that today, but I will show the results. Let's start with the plots. No surprises here. They should reveal the same shape:
+
+```{r zed_plots}
+library(cowplot)
+
+f1 <- female_height %>%
+  ggplot( aes(x = zed)) +
+  geom_density(fill = "red", alpha = 0.4) +
+  labs(x = "Z-Score: SD +/- from Mean", y = "Density", title = "Female Heights: Standardized",
+       caption = "Data Source: Freie Universität Berlin")
+
+m1 <- male_height %>%
+  ggplot( aes(x = zed)) +
+  geom_density(fill = "blue", alpha = 0.4) +
+  labs(x = "Z-Score: SD +/- from Mean", y = "Density", title = "Male Heights: Standardized",
+       caption = "Data Source: Freie Universität Berlin")
+
+plot_grid(f1, m1)
+
+```
+
+For a standardized Normal Distribution, the mean always is ZERO: 0. Let's see the data sets (first six rows of each):
+
+```{r slice_g }
+female_height %>% 
+  slice(1:6) %>% 
+  knitr::kable()
+
+male_height %>% 
+  slice(1:6)  %>% 
+  knitr::kable()
+```
+
+#### FYI, NOT Practice
+
+Finally, just for your reference, the basic function is `scale(numeric_vector, center = TRUE)`. For the *numeric vector*, we would use a *numeric variable* from the data set. But we would likely want to save those results back to the data set.
+
+So here is the code I used (please do not run this section manually):
+
+```{r samp_code, eval = FALSE, echo = TRUE}
+# mutate & update
+female_height <- female_height %>% 
+  mutate(zed = scale(female_height$height, center = TRUE) )
+# mutate & update
+male_height <- male_height %>%
+  mutate(zed = scale(male_height$height, center = TRUE) )
+```
+
+## Credits
+
+Data and more by Hartmann, K., Krois, J., Waske, B. (2018). "The Standard Normal Distribution." [E-Learning Project SOGA: Statistics and Geospatial Data Analysis](https://www.geo.fu-berlin.de/en/v/soga/Basics-of-statistics/Continous-Random-Variables/The-Standard-Normal-Distribution/The-Standard-Normal-Distribution-An-Example/index.html). Department of Earth Sciences, Freie Universitaet Berlin. CC-BY-SA 4.0. Other sources cited by link in text. This worksheet [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) (2021) by TJH.
+
+### Free at Github
+
+The data, functions, this RMD, and the worksheet RMD are freely available at [github.com/Thom-J-H/Grab_Bag](https://github.com/Thom-J-H/Grab_Bag). Please feel free to improve. Thank you.
+
+<hr />
+
+::: {style="background-color: #F0F8FF; padding: 1em;"}
+<p>
+
+Thomas J. Haslam <br /> `r Sys.Date()`
+
+</p>
+:::
+
+<hr />
+
+#### Session Info
+
+```{r package info, echo = FALSE}
+ses_info <- sessioninfo::package_info() %>% tibble() 
+ses_info %>% select(c(1,3,8,9)) %>% DT::datatable()
+```

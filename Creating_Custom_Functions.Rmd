@@ -1,0 +1,456 @@
+---
+title: "Customized Graphs for Norm Dist"
+date: "`r Sys.Date()`"
+author: "Thom J. Haslam"
+output:
+  html_document:
+    toc: yes 
+    toc_float: yes
+  toc: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	fig.align = "center",
+	fig.fullwidth = TRUE,
+	message = FALSE,
+	warning = FALSE
+)
+```
+
+```{r libraries}
+library(tidyverse)
+library(here)
+library(visdat)
+library(glue)
+```
+
+## Brief Introduction
+
+In Spring 2021, I taught a course entitled "Telling Stories with Data" (TSD), which introduced non-STEM majors to the Tidyverse and basic data visualization and analysis. I had bright students, but ones who typically had NO prior experience with either statistical analysis or computer programming. So TSD was designed as a soft entry, beginner-level guide to working with data.
+
+```{r examps, echo = FALSE}
+load("~/R_STUDIO/TSD_One/data/tidy_data/examps.rda")
+```
+
+This required having the students explore and learn about distributions, distributions as probability spaces, the normal distribution, and the Central Limit Theorem (CLT). To people with a background in Quantitative Analysis, this is all remedial. For people with no background, it can be difficult, confusing, and seem even at times semi-magical.
+
+To help the students learn about the normal distribution, the CLT, and functions like `pnorm()`, I created a small family of customized graphing functions for one of the natural normal distributions we were were exploring
+
+*Female students under the minimum male height*:
+
+```{r echo = FALSE}
+p5
+```
+
+*Male students under the maximum female height*:
+
+```{r echo = FALSE}
+p7
+```
+
+### The Graphing Functions
+
+I wanted a result that would visualize the probability space and print "Zed" score for a given value in the distribution. Essentially, a combination of`pnorm()` with `ggplot()` and the appropriate area shaded.
+
+*Female students over the minimum male height*:
+
+```{r echo = FALSE}
+p6
+```
+
+*Male students over the maximum female height*:
+
+```{r echo = FALSE}
+p8
+```
+
+## Starting with Data
+
+We start with a normal distribution. Human height is well-studied, and we know that for adults it is normally distributed. This both without and after accounting for the two primary biological sexes: but we get more accurate results when accounting for biological sex.
+
+### Student Height Data
+
+So as our class practice, we always try to work with real world data sets (or near-enough). This data set concerns a population of college students. The data source: Hartmann, K., Krois, J., Waske, B. (2018). "The Standard Normal Distribution." [E-Learning Project SOGA: Statistics and Geospatial Data Analysis](https://www.geo.fu-berlin.de/en/v/soga/Basics-of-statistics/Continous-Random-Variables/The-Standard-Normal-Distribution/The-Standard-Normal-Distribution-An-Example/index.html). Department of Earth Sciences, Freie Universitaet Berlin. CC-BY-SA 4.0.
+
+```{r import_data}
+students <- read.csv("https://userpage.fu-berlin.de/soga/200/2010_data_sets/students.csv") 
+
+students <- students %>% 
+  tibble()
+
+students %>% 
+  glimpse()
+
+```
+
+Since we are only interested in height, the other variables will be dropped.
+
+```{r stu_height}
+stu_height <- students %>% 
+  select(gender, height)
+
+stu_height %>% 
+  group_by(gender) %>% 
+  skimr::skim()
+```
+
+We can also recreate some of the `skimr::skim()` results as summary stats.
+
+### Summary Stats
+
+```{r sum_stats}
+dist_stats <- stu_height  %>% 
+  group_by(gender) %>% 
+  summarize(avg_height = mean(height), 
+            sd_height = sd(height),
+            min_height = min(height),
+            max_height = max(height))
+
+dist_stats %>%
+  knitr::kable( caption = "Summary Stats")
+
+female_avg <- dist_stats$avg_height[1] 
+female_sd <- dist_stats$sd_height[1]
+
+male_avg <- dist_stats$avg_height[2] 
+male_sd <- dist_stats$sd_height[2]
+
+```
+
+### Distributions Viz
+
+Our distributions, with the mean lines added:
+
+```{r plot_diss}
+plot_heights <- stu_height %>%
+  ggplot( aes(x = height,  fill = gender) ) +
+  geom_density(alpha = 0.4) +
+  labs(x = "Height in CM", y = "Density", 
+       fill = "Gender", title = "College Student Height: Normally Distributed",
+       subtitle = "8239 observations. Female: 4110.  Male: 4129.",
+       caption = "Data Source: Freie Universität Berlin") +
+  geom_vline(xintercept = male_avg,  lty = 3) +
+  geom_vline(xintercept = female_avg,  lty = 3) +
+  scale_fill_manual(values = c("red", "blue")) +
+  theme_classic() +
+  theme(legend.position = c(.9, .9))
+
+
+plot_heights  ## Main plot to start
+```
+
+### Parameters Viz
+
+Using`rnom()` and `dnorm()`, we can we build the density curves with the parameter values for the mean and standard deviation. The result shows that our empirical distributions match closely to idealized normal distributions:
+
+```{r}
+test_sd <- sd(stu_height$height)
+test_avg <- mean(stu_height$height)
+
+height_norm <- rnorm(10000, test_avg, test_sd )
+
+height_norm <- height_norm %>% enframe(value = "height", name = NULL)
+
+x_ticks <- seq(120, 220, by = 10)
+
+three_dist <- height_norm %>%
+  ggplot(aes(x = height)) +
+  stat_function(fun = dnorm, 
+                args = list(mean = female_avg, sd = female_sd), 
+                color = "red") +
+  stat_function(fun = dnorm,  
+                args = list(mean = male_avg, sd = male_sd),
+                color = "blue") +
+  stat_function(fun = dnorm,  
+                args = list(mean = mean(height_norm$height), 
+                            sd = sd(height_norm$height)),
+                color = "black") +
+  scale_x_continuous(breaks = x_ticks) +
+  theme_classic() +
+  labs(title = "Student Height Distribution",
+       subtitle = "Black: All; Red: Female; Blue: Male",
+       y = "Density", x = "Height in CM",
+       caption = "Data Source: Freie Universität Berlin")
+
+three_dist 
+
+```
+
+So we can proceed with confidence in using the Student Height data, `stu_height`, to explore the normal distribution and the CLT.
+
+```{r comb_stats}
+ stu_height %>% 
+  summarize(avg_height = mean(height),
+            sd_height = sd(height),
+            min_height = min(height),
+            max_height = max(height)) %>%
+  mutate(gender = "All") %>%
+  select(gender, everything()) %>%
+  bind_rows(dist_stats) %>%
+  knitr::kable( caption = "Summary Stats")
+
+```
+
+## Building the Functions
+
+The functions will take a numeric value: height measured in centimeters. We want to do the following:
+
+1.  Map the value to the "Z" score.
+2.  Calculate the probability space associated with that value.
+3.  Shade the appropriate area under the curve.
+
+To do this, we use an obscure ggplot function: `ggplot_build()`. It allows us to access the plot data itself.
+
+So we will create two plots to mine for data. First, a plot of Female Height; second, a plot of Male Height. We will then use in our custom functions the information obtained by building those plots.
+
+### Map Value to ZED
+
+```{r}
+female_height <- stu_height  %>% 
+  filter(gender == "Female")  %>% 
+  mutate(zed = scale(height, center = TRUE) )
+
+female_height %>% head()
+
+male_height <- stu_height  %>% 
+  filter(gender == "Male")  %>%
+  mutate(zed = scale(height, center = TRUE) )
+
+male_height %>% head()
+
+```
+
+So far, so good.
+
+### Map Value to Area
+
+We now build two plots not for display, but to raid the data generated by building the plots themselves. We're looking at the guts, so to speak, of two density plots.
+
+```{r plots_mine}
+
+fh_plot <- female_height %>%
+  ggplot( aes(x = height ) ) +
+  geom_density() # Just for the data
+
+fh_area <- ggplot_build(fh_plot)$data[[1]] # grab data
+
+
+
+mh_plot <- male_height %>%
+  ggplot( aes(x = height ) ) +
+  geom_density()  #  Just for the data
+
+
+mh_area <-  ggplot_build(mh_plot)$data[[1]] # grab data
+
+fh_area %>% glimpse()
+mh_area %>% glimpse()
+```
+
+The area we need to fill is defined by the x, y coordinates. We can ignore the other variables for our purpose here.
+
+### Visualizing pnorm()
+
+We are now ready build our custom plotting functions. Using `pnorm()` will give us the probability space as a numeric. Using `geom_area(data = subset(fh_area, x < test_height)` will give us the shape up to our cut-off value: the lower tail. Conversely, using `geom_area(data = subset(fh_area, x > test_height)` will give us the area to the right of our cut-off value: the upper tail.
+
+```{r four_funcs}
+# Custom functions --------------------------------------------------------
+## female under
+female_show_height_under <- function(test_height){
+  
+  prob_h <- pnorm(test_height, female_avg, female_sd) %>% 
+    round(3)
+  
+  zed <- female_height %>% 
+    filter(height == test_height) %>% 
+    pull(zed) %>% unique() %>% round(3)
+  
+  if(test_height < 136) warning ("Choose a value between 136 & 192")
+  if(test_height > 192 ) warning ("Choose a value between 136 & 192")
+
+  female_height %>% 
+  ggplot( aes(x = height, y = ..density.. ) ) +
+  geom_density( alpha = 0.4, fill = "grey") +
+  geom_vline(xintercept = test_height, lty = 3, color = "red") +
+  geom_vline(xintercept = female_avg, lty = 5, color = "grey") +
+  geom_area(data = subset(fh_area, x < test_height ) , 
+            aes(x = x, y = y), 
+            fill = "red",
+            alpha = 0.3) +
+  theme_classic() +
+  labs(title = "Female Students: Height Under", 
+       x = "Height in CM", y = "Density",
+       subtitle = paste("Red area <", {test_height}, "CM",
+                        " | ",   "Probability space:", {prob_h},
+                        " | ",  "Zed:", {zed}  ),
+       caption = "Data Source: Freie Universität Berlin")
+}
+#
+
+## female over
+
+female_show_height_over <- function(test_height){
+  
+  prob_h <- pnorm(test_height, female_avg, female_sd, 
+                  lower.tail = FALSE) %>% 
+    round(3)
+  
+  zed <- female_height %>% 
+    filter(height == test_height) %>% 
+    pull(zed) %>% unique() %>% round(3)
+  
+  if(test_height < 136) warning ("Choose a value between 136 & 192")
+  if(test_height > 192 ) warning ("Choose a value between 136 & 192")
+  
+  female_height %>% 
+    ggplot( aes(x = height, y = ..density.. ) ) +
+    geom_density( alpha = 0.4, fill = "grey") +
+    geom_vline(xintercept = test_height, lty = 3, color = "red") +
+    geom_vline(xintercept = female_avg, lty = 5, color = "grey") +
+    geom_area(data = subset(fh_area, x > test_height ) , 
+              aes(x = x, y = y), 
+              fill = "red", 
+              alpha = 0.3) +
+    theme_classic() +
+    labs(title = "Female Students: Height Over",
+         x = "Height in CM", y = "Density",
+         subtitle = paste("Red area >", {test_height}, 
+                          "CM", " | ", "Probability space:", {prob_h}, 
+                          " | ",  "Zed:", {zed}  ),
+         caption = "Data Source: Freie Universität Berlin")
+}
+#
+
+# male under
+male_show_height_under <- function(test_height){
+  
+  prob_h <- pnorm(test_height, male_avg, male_sd) %>% 
+    round(3)
+  
+  zed <- male_height %>% 
+    filter(height == test_height) %>% 
+    pull(zed) %>% unique() %>% round(3)
+  
+  if(test_height < 145) warning ("Choose a value between 145 & 201")
+  if(test_height > 201 ) warning ("Choose a value between 145 & 201")
+  
+  male_height %>% 
+    ggplot( aes(x = height, y = ..density.. ) ) +
+    geom_density( alpha = 0.4, fill = "grey") +
+    geom_vline(xintercept = test_height, lty = 3, color = "blue") +
+    geom_vline(xintercept = male_avg, lty = 5, color = "grey") +
+    geom_area(data = subset(mh_area, x < test_height ) , 
+              aes(x = x, y = y), 
+              fill = "blue",
+              alpha = 0.3) +
+    theme_classic() +
+    labs(title = "Male Students: Height Under", 
+         x = "Height in CM", y = "Density",
+         subtitle = paste("Blue area <", {test_height}, 
+                          "CM", " | ",  
+                          "Probability space:", {prob_h}, 
+                          " | ",  "Zed:", {zed}   ),
+         caption = "Source: Freie Universität Berlin")
+}
+#
+
+## male over
+male_show_height_over <- function(test_height){
+  
+  prob_h <- pnorm(test_height, male_avg, male_sd, lower.tail = FALSE) %>% 
+    round(3)
+  
+  zed <- male_height %>% 
+    filter(height == test_height) %>% 
+    pull(zed) %>% unique() %>% round(3)
+  
+  if(test_height < 145) warning ("Choose a value between 145 & 201")
+  if(test_height > 201 ) warning ("Choose a value between 145 & 201")
+  
+  male_height %>% 
+    ggplot( aes(x = height, y = ..density..  ) ) +
+    geom_density( alpha = 0.4, fill = "grey") +
+    geom_vline(xintercept = test_height, lty = 3, color = "blue") +
+    geom_vline(xintercept = male_avg, lty = 5, color = "grey") +
+    geom_area(data = subset(mh_area, x > test_height ) , 
+              aes(x = x, y = y), 
+              fill = "blue", 
+              alpha = 0.3) +
+    theme_classic() +
+    labs(title = "Male Students: Height Over", 
+         x = "Height in CM", y = "Density",
+         subtitle = paste("Blue area >", 
+                          {test_height}, "CM", 
+                          " | ", "Probability space:", 
+                          {prob_h}, " | ",  "Zed:", {zed}  ),
+         caption = "Data Source: Freie Universität Berlin")
+}
+
+```
+
+### Test Functions
+
+To work the properly, the possible values for each function are the minimum distribution value + 1, or the maximum distribution value - 1. It makes no sense to ask what is the probability of a value outside of the distribution.
+
+We can start with a test_height of 170.
+
+```{r test_func }
+
+test_height <- 170
+
+# Choose a whole number value between 136 & 192
+female_show_height_under(test_height)
+female_show_height_over(test_height)
+
+# Choose a whole lnumber  value between 145 & 201
+male_show_height_under(test_height) 
+male_show_height_over(test_height) 
+
+```
+
+All good!
+
+## Save
+
+We now have our custom functions for classwork and play. Let's save them and the needed data so that we can load the image into our worksheet. Please note that our worksheet will first load the libraries `tidyverse`, `here`, and `glue`.
+
+```{r save_dat }
+
+remove_these <- c("p5","p6", "p7", "p8", 
+                  "mh_plot", "fh_plot",
+                  "students", "three_dist",
+                  "x_ticks", "test_avg", 
+                  "test_sd", "test_height")
+
+rm(list = remove_these)
+rm(remove_these)
+
+save.image(file = here::here("data", 
+                             "tidy_data", 
+                             "fun_w_norm.RData"))
+```
+
+### Free at Github
+
+The data, functions, this RMD, and the worksheet RMD are freely available at [github.com/Thom-J-H/Grab_Bag](https://github.com/Thom-J-H/Grab_Bag). Please feel free to improve. Thank you.
+
+<hr />
+
+::: {style="background-color: #F0F8FF; padding: 1em;"}
+<p>
+
+Thomas J. Haslam <br /> `r Sys.Date()`
+
+</p>
+:::
+
+<hr />
+
+#### Session Info
+
+```{r package info, echo = FALSE}
+ses_info <- sessioninfo::package_info() %>% tibble() 
+ses_info %>% select(c(1,3,8,9)) %>% DT::datatable()
+```
