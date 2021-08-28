@@ -1,0 +1,217 @@
+---
+title: "How typical for a redwood? "
+date: "`r Sys.Date()`"
+author: "Thom J. Haslam"
+output:
+  html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	fig.align = "center",
+	fig.fullwidth = TRUE,
+	message = FALSE,
+	warning = FALSE
+)
+```
+
+## 50 Meters Tall
+*Note: This is from a class work sheet from "Telling Stories with Data" (TSD), a course which introduced non-STEM majors to the Tidyverse and basic data visualization and analysis.* Markdown and code freely available at [github.com/Thom-J-H/Grab_Bag](https://github.com/Thom-J-H/Grab_Bag).
+
+```{r libraries}
+library(tidyverse)
+```
+
+
+### Numbers in Context
+We discussed earlier how numbers make sense in context -- as part of a distribution.  Our question: how unusual is it for a redwood tree to be 50 meters tall?  For most of us in our course, a 50 meter tree seems huge -- maybe a once-in-lifetime sight. The opportunity to see such a tree might be rare.  But how common or uncommon is it for a redwood to be 50 meters tall (or higher)?
+
+This is a question about probability, about putting the number in context. We understand the measurement of 50 meters as being part of a distribution.  
+
+
+To answer this question, I found a source that applies to old growth redwoods: "Distribution Of Tree Height In An Old Growth Redwood Forest" (2015 July 14), [Mark Edward Graham](http://verylargeandtallredwoods.com/?tag=redwood-tree-height-distribution). 
+
+We will convert the feet to meters.  According to our source, for old growth redwoods (mature trees), height follows a normal (or *nearly normal*) distribution.
+
+### Gathering the Data
+
+```{r dnorm_start, echo = TRUE}
+# as reported in our source
+redwood_zed <- c(4.5,  4.0,  3.0,  2.0,  1.0 , 0.0, -1.0, -2.0, -3.0, -4.0, -4.5)
+redwood_hfeet <- c(383, 368, 338, 308, 278, 248, 218, 188, 158, 128, 113)
+redwood_hmeters <- redwood_hfeet * 0.3048 # my conversion
+redwood_stats <- tibble(redwood_zed , redwood_hfeet, redwood_hmeters) # save as data_frame
+
+redwood_stats %>% knitr::kable( caption = "Stats")  #have a look
+
+```
+
+For an old growth forest, 50 meters is a short redwood!  To calculate the probability of a tree being 50 meters or higher in an old growth forest, We need the `redwood_avg` and `redwood_sd`.  We can get both from the above stats. 
+
+Note that `pnorm(mean, sd, lower.tail = FALSE)` will give us the probability that an old growth redwood tree is taller than 50 meters; `pnorm(mean, sd)`, the probability an old growth redwood tree is shorter than 50 meters
+
+```{r test_50_meters, echo = TRUE }
+redwood_avg <- 75.5904
+redwood_sd <- 9.144
+
+# answer the question
+pnorm(50, redwood_avg, redwood_sd, lower.tail = FALSE)
+
+pnorm(50, redwood_avg, redwood_sd)
+```
+
+So a likelihood of  an old growth redwood tree  shorter that 50 meters: `0.26%` or  roughly `1/4` of `1%`. Of course, if we were nearer to the California coast and the highly developed areas, or to forests with mixed growth (new & old) because of logging and development, 50 meters might be a tall redwood tree.  But for an old growth forest, over 99% of the mature redwood trees will have heights greater than 50 meters.  Now we know!
+
+Using `ggplot()` and the obscure function `ggplot_build()`, let's build a fancy plot to visualise the ZED scores and height ranges.  This section is just FYI, not a forthcoming assignment!
+
+### Building a Density Plot
+
+From the numbers, let's learn and use one more function to build the density curve. That function: `rnorm()`. This means create a *random normal distribution* from the **parameters**.  
+
+Here I am just showing you how this function works.  Don't stress!
+
+
+#### Using rnorm()
+
+To make a density plot using `rnorm()`, we need two **parameters**: **mean** & **sd**.  According to our source, the **mean** ==  `75.5904` meters; and one  **sd**, `9.144` meters. 
+
+Our source also claims a population sample of over 700K (seven hundred thousand) trees from two old growth forests.  We will build our plot using just 100K -- should be plenty!
+
+```{r echo = TRUE}
+
+pop_size <-  100000
+
+tree_plot <- rnorm(n = pop_size, mean = redwood_avg , sd = redwood_sd ) %>%
+  enframe(value = "m_height", name = NULL) # save as data_frame
+
+tree_plot <- tree_plot %>% 
+  mutate(zed = scale(tree_plot$m_height, center = TRUE) ) # add for comparison
+
+```
+
+### Ready to Plot!
+
+Let's do a quick plot by height in meters.  Then one by Z-Score.  Then, let's do a fancy plot.
+
+```{r echo = TRUE}
+tree_plot %>% 
+  ggplot( aes(x = m_height)) + 
+  geom_density() + 
+  geom_vline(xintercept = redwood_avg, lty = 2 ) +
+  labs(x = "Height in Meters")
+
+tree_plot %>% 
+  ggplot( aes(x = zed) ) + 
+  geom_density()  +
+  labs(x = "Z-Score")
+
+```
+
+Not bad! Reasonably smooth curves.  Notice again: the shape of the distribution does not change when we convert from meters to standard deviations.  We keep the relationships between the numbers in our data set.  But we now have a more useful means for comparison.  If a redwood tree is within one SD of the mean, nothing interesting!
+
+We'll do our plot, and then do the `pnorm()` or probability space calculation for our 50 meter tall redwood.
+
+
+### Time to get a little crazy 
+Time for our fancy plot.  In stages. As your instructor, I need to challenge myself.
+
+**Stage Zero**: Let's define our SD boundaries -- the Z-Scores lines for -3 to 3.
+
+```{r echo = TRUE}
+# make some boundaries 
+zed_three <- redwood_avg + (3 * redwood_sd )
+zed_three_neg <- redwood_avg - (3 * redwood_sd )
+
+zed_two <- redwood_avg + (2 * redwood_sd )
+zed_two_neg <- redwood_avg - (2 * redwood_sd )
+
+zed_one <- redwood_avg + redwood_sd
+zed_one_neg  <- redwood_avg - redwood_sd
+
+bundle_zed <- c(zed_three, zed_three_neg, zed_two, 
+                zed_two_neg, zed_one, zed_one_neg   )
+
+```
+
+**Stage One**: We will build the plot, and  then use data from the plot build to further build the plot.  Because we can.
+
+```{r}
+# please do not change
+first_try <- tree_plot %>% 
+  ggplot( aes(x = m_height)) + 
+  geom_density(fill = "gray", alpha = 0.2) + 
+  geom_vline(xintercept = redwood_avg, lty = 3, color = "blue" ) +
+  theme_classic() +
+  geom_vline(xintercept = bundle_zed, lty = 3, color = "blue")
+
+tree_area <- ggplot_build(first_try)$data[[1]] # grab plot build info
+
+```
+
+**Stage Two**:  We use the data from `tree_area` (plot information) to shade the Standard Deviation areas.  Why go through all this trouble?  You normally do NOT.  I am using it as a teaching example.  I am not recommending this as a practice. Let's add our shaded regions.  I will use [CSS Hex code](https://www.w3schools.com/css/css_colors_hex.asp) for the different [green colors](https://www.color-meanings.com/shades-of-green-color-names-html-hex-rgb-codes).
+
+```{r}
+# please do not change
+second_try <- first_try +
+  geom_area(data = subset(tree_area,  x > zed_three_neg & x < zed_two_neg) , 
+            aes(x = x, y = y), fill = "#39FF14", alpha = 0.7) +
+   geom_area(data = subset(tree_area,  x < zed_three & x > zed_two) , 
+            aes(x = x, y = y), fill = "#39FF14", alpha = 0.7) +
+   geom_area(data = subset(tree_area,  x > zed_two_neg & x < zed_one_neg) , 
+            aes(x = x, y = y), fill = "#03AC13", alpha = 0.7) +
+    geom_area(data = subset(tree_area,  x < zed_two & x > zed_one) , 
+            aes(x = x, y = y), fill = "#03AC13", alpha = 0.7) +
+  geom_area(data = subset(tree_area,  x < zed_one & x > redwood_avg ) , 
+            aes(x = x, y = y), fill = "#0B6623", alpha = 0.7) + 
+  geom_area(data = subset(tree_area,  x > zed_one_neg & x < redwood_avg ) , 
+            aes(x = x, y = y), fill = "#0B6623", alpha = 0.7) +
+   geom_area(data = subset(tree_area,  x < zed_three_neg  ) , 
+            aes(x = x, y = y), fill = "yellow", alpha = 0.9)  +
+     geom_area(data = subset(tree_area,  x > zed_three  ) , 
+            aes(x = x, y = y), fill = "yellow", alpha = 0.9) 
+  
+```
+
+**Stage Three**: Now, we add the labels, tweak the X axis display, and call it done!
+
+```{r}
+ # please do not change unless you are certain 
+x_ticks <- seq(30, 120, by = 15)
+second_try +
+  labs(x = "Height in Meters", y = "Density",
+       title = "Old Growth Redwood Trees: Height Distribution",
+       subtitle = "Shaded areas (& dashed lines) indicate SD regions",
+       caption = "Data source: Mark Edward Graham (2015)") +
+  scale_x_continuous(breaks = x_ticks )
+```
+
+
+Well, I like it.  Again, I do not recommend doing all this jazz as matter of standard practice.  But it does help us visualize the concepts, and does also display the versatility and flexibility of ggplot2.  The limits are your time and imagination.
+
+
+**END**
+
+*Nota bene*: Mark Edward Graham has updated the original article (and unfortunately, removed it): [Canopy Height Distribution in Old Growth Redwoods Forests](http://verylargeandtallredwoods.com/?p=1635) (2020 Dec.) is the new study. It provides some excellent graphs, but no longer provides the distribution stats. 
+
+
+
+<hr />
+
+::: {style="background-color: #F0F8FF; padding: 1em;"}
+<p>
+Thomas J. Haslam <br /> `r Sys.Date()`<br /> 
+[github.com/Thom-J-H/Grab_Bag](https://github.com/Thom-J-H/Grab_Bag)
+</p>
+:::
+
+<hr />
+
+### Session Info
+
+```{r package info, echo = FALSE}
+ses_info <- sessioninfo::package_info() %>% tibble() 
+ses_info %>% select(c(1,3,8,9)) %>% DT::datatable()
+```
+
