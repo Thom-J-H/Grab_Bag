@@ -2,6 +2,13 @@
 
 This repo collects all the notebooks (& related scripts) that add up to no greater whole or theme, but that I do not (yet) wish to throw away. In reverse chronological order.
 
+## How typical is a 50 meters redwood?
+![redwood](https://user-images.githubusercontent.com/12042357/131209227-117d120f-bafc-4829-a144-3ac627112d6d.png)
+
+In Spring 2021, I taught a course entitled “Telling Stories with Data” (TSD), which introduced non-STEM majors to the Tidyverse and basic data visualization and analysis.  We talked about the importance of putting numbers in context -- in understanding a given value as part of a distribution.  One question I had for my students: How unusual is it for a redwood tree to be 50 meters tall?  How do we make sense of 50 meters in this context?  So a brief application of the CLT.
+
+**2021-08-28**
+
 ## Exploring Student Height (the Central Limit Theorem)
 ![example](https://user-images.githubusercontent.com/12042357/130921846-b948eaf9-6ee5-4412-aeb4-ec403d43eb7e.png)
 
