@@ -7,7 +7,7 @@ This repo collects all the notebooks (& related scripts) that add up to no great
 
 In Spring 2021, I taught a course entitled “Telling Stories with Data” (TSD), which introduced non-STEM majors to the Tidyverse and basic data visualization and analysis.  We talked about the importance of putting numbers in context -- in understanding a given value as part of a distribution.  One question I had for my students: How unusual is it for a redwood tree to be 50 meters tall?  How do we make sense of 50 meters in this context?  So a brief application of the CLT.  
 
-RMD archeved here.  Report at RPubs: 
+RMD archived here.  Report at RPubs: 
 1. [How typical for a redwood?](https://rpubs.com/Thom_JH/redwood_50_meters)
 
 **2021-08-28**
