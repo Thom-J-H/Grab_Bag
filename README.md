@@ -9,6 +9,8 @@ In Spring 2021, I taught a course entitled “Telling Stories with Data” (TSD)
 
 **2021-08-28**
 
+<hr /> 
+
 ## Exploring Student Height (the Central Limit Theorem)
 ![example](https://user-images.githubusercontent.com/12042357/130921846-b948eaf9-6ee5-4412-aeb4-ec403d43eb7e.png)
 
