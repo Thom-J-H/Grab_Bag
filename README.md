@@ -2,6 +2,8 @@
 
 This repo collects all the notebooks (& related scripts) that add up to no greater whole or theme, but that I do not (yet) wish to throw away. In reverse chronological order.
 
+Please note: as of 14 May 2022,  all code, data, and image files associated with this repository are now [CC0 (Public Domain)](https://creativecommons.org/share-your-work/public-domain/cc0/). Any text commentary remains copyright &copy; 2022 to the respective authors.
+
 ## How typical is a 50 meters redwood?
 ![redwood](https://user-images.githubusercontent.com/12042357/131209227-117d120f-bafc-4829-a144-3ac627112d6d.png)
 
@@ -40,3 +42,28 @@ Code and RMD here.  Report at RPubs:
 1. [A Tidyverse Exam Note](https://rpubs.com/Thom_JH/Reproduce_Fix)
 
 **2021-07-26**
+
+
+<hr />
+The following applies to all code, data, and image files associated with this repository.  Any text commentary remains copyright &copy; 2022 to the respective authors.
+
+
+<p xmlns:dct="http://purl.org/dc/terms/" xmlns:vcard="http://www.w3.org/2001/vcard-rdf/3.0#">
+  <a rel="license"
+     href="http://creativecommons.org/publicdomain/zero/1.0/">
+    <img src="https://licensebuttons.net/p/zero/1.0/88x31.png" style="border-style: none;" alt="CC0" />
+  </a>
+  <br />
+  To the extent possible under law,
+  <a rel="dct:publisher"
+     href="https://github.com/Thom-J-H/map_Gap_2_Tidy">
+    <span property="dct:title">Thomas J. Haslam</span></a>
+  has waived all copyright and related or neighboring rights to
+  <span property="dct:title">Grab_Bag</span>.
+This work is published from:
+<span property="vcard:Country" datatype="dct:ISO3166"
+      content="US" about="https://github.com/Thom-J-H/map_Gap_2_Tidy">
+  United States</span>.
+</p>
+
+If you find these results useful, please consider <a href = "http://buymeacoffee.com/datahumanist">buying me a coffee</a>!
